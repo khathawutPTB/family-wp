@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-yellow: #f2b705;
+  --color-brand-yellow-dark: #d9a404;
+  --color-brand-yellow-soft: #fbe9b8;
+  --color-brand-teal: #6fa695;
+  --color-brand-teal-dark: #4f8172;
+  --color-brand-teal-soft: #dfeae5;
+  --color-brand-orange: #e8871e;
+  --color-brand-orange-soft: #fbe0c4;
+  --color-brand-ink: #2b2a28;
+  --color-brand-cream: #faf6ec;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, "Segoe UI", Roboto, "Sarabun", sans-serif;
+}

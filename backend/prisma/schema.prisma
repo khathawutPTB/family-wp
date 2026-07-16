@@ -1,0 +1,86 @@
+// Prisma schema for the Income/Expense Tracker
+// Production datasource: PostgreSQL (e.g. Railway). Run
+// `npx prisma migrate deploy` after setting DATABASE_URL in .env
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+model User {
+  id           Int           @id @default(autoincrement())
+  name         String
+  email        String        @unique
+  passwordHash String        @map("password_hash")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  categories    Category[]
+  transactions  Transaction[]
+  familyMembers FamilyMember[]
+
+  @@map("users")
+}
+
+// A family member is a tag a user creates to attribute transactions to
+// (e.g. "พ่อ", "แม่", "ลูก"). It is not a separate login — the whole
+// household shares the one user account.
+model FamilyMember {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  name      String
+  role      String
+  avatar    String
+  color     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@map("family_members")
+}
+
+// Categories are either global defaults (userId = null, seeded once)
+// or custom categories created by a specific user.
+model Category {
+  id     Int              @id @default(autoincrement())
+  name   String
+  type   TransactionType
+  icon   String?
+  userId Int?             @map("user_id")
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([userId, name, type])
+  @@map("categories")
+}
+
+model Transaction {
+  id         Int              @id @default(autoincrement())
+  userId     Int              @map("user_id")
+  categoryId Int              @map("category_id")
+  memberId   Int?             @map("member_id")
+  type       TransactionType
+  amount     Decimal          @db.Decimal(12, 2)
+  date       DateTime         @db.Date
+  note       String?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category      @relation(fields: [categoryId], references: [id])
+  member   FamilyMember? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date])
+  @@map("transactions")
+}
