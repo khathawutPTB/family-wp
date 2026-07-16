@@ -8,5 +8,8 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // Quick tunnels (trycloudflare.com) present a hostname Vite doesn't
+    // recognize by default; without this it 403s every request.
+    allowedHosts: ['.trycloudflare.com'],
   },
 })

@@ -1,85 +1,89 @@
-# คู่มือ Deploy ขึ้นใช้งานจริง (Railway + Vercel)
+# คู่มือ Deploy ขึ้นใช้งานจริง — ฟรีถาวร (Render + Neon + Vercel)
 
-เป้าหมาย: ให้เข้าแอปได้จากมือถือทุกเครื่อง (Android/iOS) ผ่านอินเทอร์เน็ต ไม่ใช่แค่ Wi-Fi วงเดียวกัน
+เป้าหมาย: ให้เข้าแอปได้จากมือถือทุกเครื่อง (Android/iOS) ผ่านอินเทอร์เน็ต ไม่ใช่แค่ Wi-Fi วงเดียวกัน และ **ไม่มีค่าใช้จ่าย** (ต่างจาก Railway ที่เป็นแค่ trial 30 วันหรือ $5 credit)
 
 **สถาปัตยกรรม**
-- Backend (Express + Prisma) + PostgreSQL → โฮสต์บน **Railway**
-- Frontend (React/Vite) → โฮสต์บน **Vercel**
+- Database: PostgreSQL → **Neon** (free tier ถาวร ไม่มีวันหมดอายุ)
+- Backend (Express + Prisma) → **Render** (free web service ถาวร)
+- Frontend (React/Vite) → **Vercel** (free ถาวรสำหรับใช้งานส่วนตัว)
 
-ขั้นตอนพวก "สมัครบัญชี", "ล็อกอิน", "กดปุ่มใน dashboard ของ Railway/Vercel" ต้องทำเองในเบราว์เซอร์ของคุณ (คนอื่นทำแทนไม่ได้เพราะเป็นการยืนยันตัวตนของคุณ) ส่วนโค้ด/config ทั้งหมดเตรียมไว้ให้พร้อมแล้ว
+**ข้อแลกเปลี่ยนของฟรี**: Render free tier จะ "หลับ" เมื่อไม่มีคนใช้งาน 15 นาที รีเควสต์แรกหลังจากหลับจะช้าประมาณ 30-50 วินาที (รอครั้งเดียวตอนปลุกเครื่อง) ส่วน Neon DB ก็หลับ/ตื่นอัตโนมัติเช่นกันแต่ไม่ต้องรอนาน
 
----
-
-## ขั้นที่ 1 — สร้าง repo บน GitHub
-
-1. ไปที่ [github.com/new](https://github.com/new) สร้าง repository ใหม่ (แนะนำตั้งชื่อ `family-wp`) — เลือก **Private** หรือ **Public** ก็ได้ อย่าติ๊ก "Add README" (เรามี README อยู่แล้ว)
-2. คัดลอก URL ของ repo (เช่น `https://github.com/<username>/family-wp.git`) มาบอกผม ผมจะ push โค้ดที่เตรียมไว้ให้ทันที
+ขั้นตอนพวก "สมัครบัญชี", "ล็อกอิน", "กดปุ่มใน dashboard" ต้องทำเองในเบราว์เซอร์ของคุณ ส่วนโค้ด/config ทั้งหมดเตรียมไว้ให้พร้อมแล้ว
 
 ---
 
-## ขั้นที่ 2 — สร้าง PostgreSQL บน Railway
+## ขั้นที่ 1 — สร้าง PostgreSQL บน Neon
 
-1. ไปที่ [railway.app](https://railway.app) สมัคร/ล็อกอิน (กด "Login with GitHub" สะดวกสุด)
-2. กด **New Project** → **Provision PostgreSQL** (เลือกจากเมนู Database)
-3. รอสักครู่จนสร้างเสร็จ คลิกที่ตัว Postgres → แท็บ **Variables** → คัดลอกค่า `DATABASE_URL` (หรือ `DATABASE_PUBLIC_URL` ถ้าจะให้ผมต่อจากเครื่องนี้)
-4. ส่งค่านั้นมาให้ผม (ในแชท) — ผมจะรัน migration + seed หมวดหมู่เริ่มต้นให้ทันที
+1. ไปที่ [neon.tech](https://neon.tech) สมัคร/ล็อกอิน (กด "Continue with GitHub" สะดวกสุด)
+2. กด **Create a project** ตั้งชื่ออะไรก็ได้ (เช่น `family-wp`) เลือก region ใกล้ๆ (Singapore ถ้ามี)
+3. หลังสร้างเสร็จ จะเห็นหน้า **Connection string** ทันที — คัดลอกค่าที่ขึ้นต้นด้วย `postgresql://...` (เลือกโหมด "Pooled connection" ถ้ามีตัวเลือก จะรองรับ concurrent request ได้ดีกว่า)
+4. ส่งค่านั้นมาให้ผมในแชท — ผมจะย้าย schema + seed หมวดหมู่เริ่มต้นให้ทันที
 
-> หมายเหตุ: connection string นี้เป็นความลับ ไม่ควรแชร์ที่อื่นนอกจากในแชทนี้และตัว Railway env var เอง
+> connection string เป็นความลับ ไม่ควรแชร์ที่อื่นนอกจากในแชทนี้และตัว Render env var เอง
 
 ---
 
-## ขั้นที่ 3 — Deploy Backend บน Railway
+## ขั้นที่ 2 — Deploy Backend บน Render
 
-หลังผมรัน migration เสร็จและ push โค้ดขึ้น GitHub แล้ว:
+หลังผมรัน migration เสร็จแล้ว:
 
-1. ใน Railway project เดียวกัน กด **New** → **GitHub Repo** → เลือก repo `family-wp`
-2. คลิกที่ service ที่สร้างขึ้น → แท็บ **Settings** → **Root Directory** ใส่ `backend`
-3. แท็บ **Variables** เพิ่ม:
+1. ไปที่ [render.com](https://render.com) สมัคร/ล็อกอินด้วย GitHub
+2. กด **New** → **Web Service**
+3. เลือก **Build and deploy from a Git repository** → เชื่อม GitHub แล้วเลือก repo `family-wp`
+4. ตั้งค่า:
+   - **Name**: อะไรก็ได้ เช่น `family-wp-backend`
+   - **Region**: Singapore (หรือใกล้ที่สุด)
+   - **Root Directory**: `backend`
+   - **Runtime**: Node
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+   - **Instance Type**: **Free**
+5. เลื่อนลงมาที่ **Environment Variables** เพิ่ม:
    ```
-   DATABASE_URL   = ${{Postgres.DATABASE_URL}}     (อ้างอิงจาก Postgres plugin โดยอัตโนมัติ)
-   JWT_SECRET     = <สุ่มสตริงยาวๆ ที่คาดเดายาก>
+   DATABASE_URL   = <connection string จาก Neon ในขั้นที่ 1>
+   JWT_SECRET     = 6aaad17f26b15d83d07b9f3c71d466eb2827bd6044526316e0ae6bd5d1b5f5192bfb6fced9f1f3e6a5aff2ddae625883
    JWT_EXPIRES_IN = 7d
-   CORS_ORIGIN    = http://localhost:5173           (จะอัปเดตเป็น URL ของ Vercel ทีหลัง)
+   CORS_ORIGIN    = http://localhost:5173
    ```
-   (ไม่ต้องตั้ง `PORT` — Railway กำหนดให้อัตโนมัติ และโค้ดอ่านจาก `process.env.PORT` อยู่แล้ว)
-4. กด **Deploy** รอ build เสร็จ (Railway รัน `npm install` → `postinstall: prisma generate` → `start: prisma migrate deploy && node src/index.js` ให้อัตโนมัติตามที่ตั้งไว้ใน `backend/package.json`)
-5. แท็บ **Settings** → **Networking** → กด **Generate Domain** จะได้ URL สาธารณะ เช่น `https://family-wp-backend.up.railway.app`
-6. ทดสอบว่า backend ใช้งานได้: เปิด `https://<โดเมนที่ได้>/api/health` ควรเห็น `{"status":"ok"}`
+   (ไม่ต้องตั้ง `PORT` — Render กำหนดให้อัตโนมัติ)
+6. กด **Create Web Service** รอ build เสร็จ (ครั้งแรกอาจใช้เวลา 2-3 นาที)
+7. เมื่อ deploy สำเร็จ Render จะให้โดเมนสาธารณะมาเลย เช่น `https://family-wp-backend.onrender.com` (ดูได้ที่มุมบนของหน้า service)
+8. ทดสอบเปิด `https://<โดเมนนั้น>/api/health` ควรเห็น `{"status":"ok"}` (ถ้าเพิ่ง deploy เสร็จใหม่ๆ รอสักครู่ให้ตื่นเต็มที่ก่อน)
 
 ---
 
-## ขั้นที่ 4 — Deploy Frontend บน Vercel
+## ขั้นที่ 3 — Deploy Frontend บน Vercel
 
 1. ไปที่ [vercel.com](https://vercel.com) สมัคร/ล็อกอินด้วย GitHub
 2. กด **Add New** → **Project** → เลือก repo `family-wp`
-3. ตอนตั้งค่า project:
+3. ตั้งค่า:
    - **Root Directory**: `frontend`
-   - **Framework Preset**: Vite (Vercel ควรตรวจจับให้อัตโนมัติ)
+   - **Framework Preset**: Vite (ควรตรวจจับให้อัตโนมัติ)
 4. เปิด **Environment Variables** เพิ่ม:
    ```
-   VITE_API_URL = https://<โดเมน Railway backend จากขั้นที่ 3>/api
+   VITE_API_URL = https://<โดเมน Render backend จากขั้นที่ 2>/api
    ```
 5. กด **Deploy** รอสักครู่ จะได้ URL เช่น `https://family-wp.vercel.app`
 
 ---
 
-## ขั้นที่ 5 — เปิดให้ frontend คุยกับ backend ได้ (แก้ CORS)
+## ขั้นที่ 4 — เปิดให้ frontend คุยกับ backend ได้ (แก้ CORS)
 
-1. กลับไปที่ Railway → service ของ backend → แท็บ **Variables**
-2. แก้ `CORS_ORIGIN` เป็น URL ของ Vercel ที่ได้จากขั้นที่ 4 เช่น:
+1. กลับไปที่ Render → service ของ backend → แท็บ **Environment**
+2. แก้ `CORS_ORIGIN` เป็น URL ของ Vercel ที่ได้จากขั้นที่ 3 เช่น:
    ```
    CORS_ORIGIN = https://family-wp.vercel.app
    ```
-   (ถ้าจะให้ localhost ทดสอบต่อได้ด้วย ใส่คั่นด้วย comma: `https://family-wp.vercel.app,http://localhost:5173`)
-3. Railway จะ redeploy service ให้อัตโนมัติเมื่อแก้ env var
+3. กด **Save Changes** — Render จะ redeploy service ให้อัตโนมัติ
 
 ---
 
-## ขั้นที่ 6 — ทดสอบจากมือถือ
+## ขั้นที่ 5 — ทดสอบจากมือถือ
 
-เปิด URL ของ Vercel (เช่น `https://family-wp.vercel.app`) จากมือถือ Android หรือ iPhone เครื่องไหนก็ได้ — เข้าได้ทันทีผ่านอินเทอร์เน็ตทั่วไป ไม่ต้องต่อ Wi-Fi เดียวกับคอมพิวเตอร์แล้ว
+เปิด URL ของ Vercel (เช่น `https://family-wp.vercel.app`) จากมือถือ Android หรือ iPhone เครื่องไหนก็ได้
 
-ลงทะเบียนบัญชีใหม่ (บัญชีบน SQLite ในเครื่องเดิมจะไม่ตามมาด้วย เพราะเปลี่ยนไปใช้ PostgreSQL บน Railway แล้ว)
+ลงทะเบียนบัญชีใหม่ — ครั้งแรกที่เปิดอาจช้าสักครู่ถ้า backend หลับอยู่ (free tier ของ Render) หลังจากนั้นจะเร็วปกติจนกว่าจะไม่มีคนใช้ 15 นาทีอีกครั้ง
 
 ---
 
@@ -91,8 +95,8 @@ git commit -m "อธิบายสิ่งที่แก้"
 git push
 ```
 
-Railway และ Vercel ผูกกับ GitHub repo ไว้แล้ว จะ build + deploy เวอร์ชันใหม่ให้อัตโนมัติทุกครั้งที่ push ขึ้น branch หลัก
+Render และ Vercel ผูกกับ GitHub repo ไว้แล้ว จะ build + deploy เวอร์ชันใหม่ให้อัตโนมัติทุกครั้งที่ push ขึ้น branch หลัก
 
-## ค่าใช้จ่าย
+## ทำไมไม่ใช้ Railway
 
-Railway และ Vercel มี free tier ให้ใช้ (Railway ให้เครดิตฟรีต่อเดือนระดับหนึ่ง, Vercel ฟรีสำหรับโปรเจกต์ส่วนตัว) เพียงพอสำหรับแอปใช้ในครอบครัว แต่ถ้ามีการใช้งานเยอะขึ้นอาจมีค่าใช้จ่ายเพิ่มตามปริมาณ ควรดูราคาปัจจุบันที่เว็บของแต่ละเจ้าอีกครั้งก่อนใช้งานจริงจัง
+Railway ให้แค่ trial (30 วัน หรือ $5 credit อย่างใดอย่างหนึ่งหมดก่อน) หลังจากนั้นต้องอัปเกรดเป็นแผนเสียเงินอย่างน้อย $5/เดือนถึงจะใช้ต่อได้ ส่วน Render + Neon + Vercel ที่ใช้ในคู่มือนี้ฟรีถาวรสำหรับการใช้งานระดับส่วนตัว/ครอบครัว แลกกับ backend ที่ "หลับ" เมื่อไม่มีคนใช้งานชั่วคราว
