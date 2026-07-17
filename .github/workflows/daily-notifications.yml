@@ -1,0 +1,16 @@
+name: Daily calendar notifications
+
+on:
+  schedule:
+    # 17:01 UTC = 00:01 Thailand time (UTC+7)
+    - cron: "1 17 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call backend notification endpoint
+        run: |
+          curl -f -X POST "https://family-wp.onrender.com/api/cron/send-daily-notifications" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

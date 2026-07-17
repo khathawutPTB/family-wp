@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/client";
 import AvatarIcon from "../components/AvatarIcon";
+import { isPushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from "../utils/push";
 
 const currency = new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" });
 const dateFormatter = new Intl.DateTimeFormat("th-TH", { dateStyle: "medium" });
@@ -56,6 +57,34 @@ export default function Calendar() {
   const [noteForm, setNoteForm] = useState(emptyNoteForm);
   const [noteError, setNoteError] = useState("");
   const [savingNote, setSavingNote] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushError, setPushError] = useState("");
+
+  useEffect(() => {
+    if (!isPushSupported()) return;
+    getPushSubscription()
+      .then((sub) => setPushEnabled(!!sub))
+      .catch(() => {});
+  }, []);
+
+  async function togglePush() {
+    setPushError("");
+    setPushBusy(true);
+    try {
+      if (pushEnabled) {
+        await unsubscribeFromPush();
+        setPushEnabled(false);
+      } else {
+        await subscribeToPush();
+        setPushEnabled(true);
+      }
+    } catch (err) {
+      setPushError(err.message || "ตั้งค่าการแจ้งเตือนไม่สำเร็จ");
+    } finally {
+      setPushBusy(false);
+    }
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -161,6 +190,20 @@ export default function Calendar() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-brand-ink">ปฏิทิน</h1>
         <div className="flex gap-2">
+          {isPushSupported() && (
+            <button
+              onClick={togglePush}
+              disabled={pushBusy}
+              title={pushEnabled ? "ปิดการแจ้งเตือน" : "เปิดการแจ้งเตือนเมื่อถึงวันที่มีเหตุการณ์"}
+              className={`rounded-full text-sm px-3 py-1.5 border transition-colors disabled:opacity-50 ${
+                pushEnabled
+                  ? "bg-brand-teal text-white border-brand-teal"
+                  : "bg-white text-brand-ink/60 border-black/10"
+              }`}
+            >
+              {pushEnabled ? "🔔 เปิดอยู่" : "🔕 แจ้งเตือน"}
+            </button>
+          )}
           <select
             value={month}
             onChange={(e) => setMonth(Number(e.target.value))}
@@ -185,6 +228,8 @@ export default function Calendar() {
           </select>
         </div>
       </div>
+
+      {pushError && <p className="text-sm text-red-600 -mt-2">{pushError}</p>}
 
       <div className="bg-white rounded-3xl shadow-sm p-4">
         <div className="grid grid-cols-7 text-center text-xs text-brand-ink/40 mb-2">

@@ -24,12 +24,28 @@ model User {
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
 
-  categories    Category[]
-  transactions  Transaction[]
-  familyMembers FamilyMember[]
-  calendarNotes CalendarNote[]
+  categories        Category[]
+  transactions      Transaction[]
+  familyMembers     FamilyMember[]
+  calendarNotes     CalendarNote[]
+  pushSubscriptions PushSubscription[]
 
   @@map("users")
+}
+
+// A browser push subscription for one device. A user can have several
+// (phone, laptop, ...); each gets notified independently.
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
 }
 
 // A free-form reminder/event pinned to a calendar day (e.g. "วันเกิดคุณยาย"),
