@@ -219,7 +219,13 @@ export default function Calendar() {
                       : "text-brand-ink hover:bg-brand-cream"
                   }`}
                 >
-                  <span>{day}</span>
+                  <span
+                    style={
+                      dayNoteList?.length > 0 && !isSelected ? { color: dayNoteList[0].color } : undefined
+                    }
+                  >
+                    {day}
+                  </span>
                   {dayNoteList?.length > 0 ? (
                     <span className="text-[10px] leading-none">{dayNoteList[0].icon}</span>
                   ) : (
