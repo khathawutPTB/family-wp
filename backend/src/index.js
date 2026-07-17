@@ -7,6 +7,7 @@ const categoryRoutes = require("./routes/categories");
 const transactionRoutes = require("./routes/transactions");
 const dashboardRoutes = require("./routes/dashboard");
 const familyMemberRoutes = require("./routes/familyMembers");
+const calendarNoteRoutes = require("./routes/calendarNotes");
 
 const app = express();
 
@@ -21,15 +22,20 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/family-members", familyMemberRoutes);
+app.use("/api/calendar-notes", calendarNoteRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: "Not found" });
 });
 
 // Centralized error handler — keeps try/catch blocks in routes minimal.
+// Only ever reached for unexpected errors (routes handle expected cases like
+// validation/not-found with their own res.status().json() calls), so the
+// raw error — which can include internal details like DB connection info
+// and file paths — is logged server-side but never sent to the client.
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(err.status || 500).json({ error: err.message || "Internal server error" });
+  res.status(500).json({ error: "เกิดข้อผิดพลาดบางอย่าง กรุณาลองใหม่อีกครั้ง" });
 });
 
 const PORT = process.env.PORT || 4000;

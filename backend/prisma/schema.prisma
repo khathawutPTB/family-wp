@@ -27,8 +27,27 @@ model User {
   categories    Category[]
   transactions  Transaction[]
   familyMembers FamilyMember[]
+  calendarNotes CalendarNote[]
 
   @@map("users")
+}
+
+// A free-form reminder/event pinned to a calendar day (e.g. "วันเกิดคุณยาย"),
+// independent of any financial transaction.
+model CalendarNote {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  date      DateTime @db.Date
+  title     String
+  icon      String
+  color     String
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@map("calendar_notes")
 }
 
 // A family member is a tag a user creates to attribute transactions to
