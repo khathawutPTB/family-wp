@@ -158,4 +158,39 @@ router.get(
   }
 );
 
+// GET /api/dashboard/by-day?month=7&year=2026
+// Returns income/expense totals per day for the given month, for the
+// calendar page's day-cell indicators.
+router.get(
+  "/by-day",
+  [query("month").isInt({ min: 1, max: 12 }), query("year").isInt({ min: 2000, max: 2100 })],
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+      const month = parseInt(req.query.month, 10);
+      const year = parseInt(req.query.year, 10);
+      const { start, end } = monthRange(month, year);
+
+      const grouped = await prisma.transaction.groupBy({
+        by: ["date", "type"],
+        where: { userId: req.userId, date: { gte: start, lt: end } },
+        _sum: { amount: true },
+      });
+
+      const byDay = {};
+      for (const row of grouped) {
+        const key = row.date.toISOString().slice(0, 10);
+        byDay[key] ??= { income: 0, expense: 0 };
+        byDay[key][row.type === "INCOME" ? "income" : "expense"] = Number(row._sum.amount || 0);
+      }
+
+      res.json(byDay);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 module.exports = router;

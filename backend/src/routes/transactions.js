@@ -16,11 +16,13 @@ function handleValidation(req, res) {
 }
 
 // GET /api/transactions?month=7&year=2026&type=EXPENSE&categoryId=1&page=1&pageSize=20
+// GET /api/transactions?date=2026-07-16  (exact-day lookup, e.g. from the calendar page)
 router.get(
   "/",
   [
     query("month").optional().isInt({ min: 1, max: 12 }),
     query("year").optional().isInt({ min: 2000, max: 2100 }),
+    query("date").optional().isISO8601(),
     query("type").optional().isIn(["INCOME", "EXPENSE"]),
     query("categoryId").optional().isInt(),
     query("memberId").optional().isInt(),
@@ -31,7 +33,7 @@ router.get(
     try {
       if (!handleValidation(req, res)) return;
 
-      const { month, year, type, categoryId, memberId } = req.query;
+      const { month, year, date, type, categoryId, memberId } = req.query;
       const page = parseInt(req.query.page || "1", 10);
       const pageSize = parseInt(req.query.pageSize || "20", 10);
 
@@ -39,7 +41,12 @@ router.get(
       if (type) where.type = type;
       if (categoryId) where.categoryId = parseInt(categoryId, 10);
       if (memberId) where.memberId = parseInt(memberId, 10);
-      if (month && year) {
+      if (date) {
+        const day = new Date(date);
+        const start = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()));
+        const end = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() + 1));
+        where.date = { gte: start, lt: end };
+      } else if (month && year) {
         const start = new Date(Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1, 1));
         const end = new Date(Date.UTC(parseInt(year, 10), parseInt(month, 10), 1));
         where.date = { gte: start, lt: end };

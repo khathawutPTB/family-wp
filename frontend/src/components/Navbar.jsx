@@ -9,6 +9,7 @@ const desktopLinkClass = ({ isActive }) =>
 const tabItems = [
   { to: "/dashboard", icon: "🏠", label: "Dashboard" },
   { to: "/transactions/new", icon: "➕", label: "เพิ่มรายการ" },
+  { to: "/calendar", icon: "📅", label: "ปฏิทิน" },
   { to: "/history", icon: "📜", label: "ประวัติ" },
   { to: "/family", icon: "👪", label: "ครอบครัว" },
 ];
@@ -57,7 +58,7 @@ export default function Navbar() {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center gap-0.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                `flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[10px] font-medium transition-colors ${
                   isActive ? "bg-brand-yellow text-brand-ink" : "text-brand-ink/50"
                 }`
               }
