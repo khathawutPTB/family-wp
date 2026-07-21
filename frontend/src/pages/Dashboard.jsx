@@ -132,7 +132,14 @@ export default function Dashboard() {
           <h2 className="font-medium text-brand-ink mb-3">รายจ่ายตามสมาชิก</h2>
           <div className="space-y-3">
             {byMember.map((m) => (
-              <div key={m.memberId ?? "unassigned"}>
+              <button
+                key={m.memberId ?? "unassigned"}
+                type="button"
+                onClick={() =>
+                  navigate(m.memberId != null ? `/history?memberId=${m.memberId}` : "/history")
+                }
+                className="w-full text-left rounded-xl -mx-1 px-1 py-0.5 transition-colors hover:bg-brand-cream/60 active:bg-brand-cream"
+              >
                 <div className="flex items-center gap-2 mb-1">
                   <span
                     className="w-10 h-10 rounded-full flex items-center justify-center p-1 shrink-0"
@@ -152,7 +159,7 @@ export default function Dashboard() {
                     style={{ width: `${m.percent}%`, backgroundColor: m.color }}
                   />
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>

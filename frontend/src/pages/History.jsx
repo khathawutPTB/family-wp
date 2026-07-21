@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import api from "../api/client";
 import AvatarIcon, { avatarEmoji } from "../components/AvatarIcon";
 
@@ -7,10 +7,11 @@ const currency = new Intl.NumberFormat("th-TH", { style: "currency", currency: "
 const dateFormatter = new Intl.DateTimeFormat("th-TH", { dateStyle: "medium" });
 
 export default function History() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
   const [type, setType] = useState("");
-  const [memberFilter, setMemberFilter] = useState("");
+  const [memberFilter, setMemberFilter] = useState(searchParams.get("memberId") || "");
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
@@ -61,7 +62,11 @@ export default function History() {
           {members.length > 0 && (
             <select
               value={memberFilter}
-              onChange={(e) => setMemberFilter(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setMemberFilter(value);
+                setSearchParams(value ? { memberId: value } : {});
+              }}
               className="rounded-full border border-black/10 bg-white px-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
             >
               <option value="">ทุกคน</option>
