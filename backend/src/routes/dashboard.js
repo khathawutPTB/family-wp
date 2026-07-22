@@ -193,4 +193,58 @@ router.get(
   }
 );
 
+// GET /api/dashboard/budgets?month=7&year=2026
+// Returns each budgeted category's cap alongside this month's actual spend,
+// for the Dashboard's budget progress bars.
+router.get(
+  "/budgets",
+  [query("month").isInt({ min: 1, max: 12 }), query("year").isInt({ min: 2000, max: 2100 })],
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+      const month = parseInt(req.query.month, 10);
+      const year = parseInt(req.query.year, 10);
+      const { start, end } = monthRange(month, year);
+
+      const budgets = await prisma.budget.findMany({
+        where: { userId: req.userId },
+        include: { category: true },
+        orderBy: { createdAt: "asc" },
+      });
+
+      const grouped = await prisma.transaction.groupBy({
+        by: ["categoryId"],
+        where: {
+          userId: req.userId,
+          type: "EXPENSE",
+          date: { gte: start, lt: end },
+          categoryId: { in: budgets.map((b) => b.categoryId) },
+        },
+        _sum: { amount: true },
+      });
+      const spentByCategory = new Map(grouped.map((g) => [g.categoryId, Number(g._sum.amount || 0)]));
+
+      const result = budgets.map((b) => {
+        const amount = Number(b.amount);
+        const spent = spentByCategory.get(b.categoryId) || 0;
+        return {
+          id: b.id,
+          categoryId: b.categoryId,
+          categoryName: b.category.name,
+          categoryIcon: b.category.icon,
+          amount,
+          spent,
+          percent: amount > 0 ? Math.round((spent / amount) * 100) : 0,
+        };
+      });
+
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 module.exports = router;

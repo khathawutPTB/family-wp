@@ -1,6 +1,7 @@
 const express = require("express");
 const { body, query, validationResult } = require("express-validator");
 const prisma = require("../lib/prisma");
+const webpush = require("../lib/webpush");
 const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
@@ -13,6 +14,57 @@ function handleValidation(req, res) {
     return false;
   }
   return true;
+}
+
+// Fires a push notification the first time a category's spending crosses its
+// budget in a given month. lastNotifiedMonth/Year on the budget row makes
+// this idempotent — later transactions in the same over-budget month don't
+// re-notify.
+async function checkBudgetAndNotify(userId, categoryId, txDate) {
+  const budget = await prisma.budget.findUnique({ where: { userId_categoryId: { userId, categoryId } } });
+  if (!budget) return;
+
+  const month = txDate.getUTCMonth() + 1;
+  const year = txDate.getUTCFullYear();
+  if (budget.lastNotifiedMonth === month && budget.lastNotifiedYear === year) return;
+
+  const start = new Date(Date.UTC(year, month - 1, 1));
+  const end = new Date(Date.UTC(year, month, 1));
+  const sum = await prisma.transaction.aggregate({
+    where: { userId, categoryId, type: "EXPENSE", date: { gte: start, lt: end } },
+    _sum: { amount: true },
+  });
+  const spent = Number(sum._sum.amount || 0);
+  if (spent < Number(budget.amount)) return;
+
+  const [category, subscriptions] = await Promise.all([
+    prisma.category.findUnique({ where: { id: categoryId } }),
+    prisma.pushSubscription.findMany({ where: { userId } }),
+  ]);
+
+  const payload = JSON.stringify({
+    title: `⚠️ งบ${category?.name || ""}เกินแล้ว`,
+    body: `ใช้ไป ${spent.toLocaleString("th-TH")} บาท จากงบ ${Number(budget.amount).toLocaleString("th-TH")} บาท`,
+    url: "/dashboard",
+  });
+
+  for (const sub of subscriptions) {
+    try {
+      await webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        payload
+      );
+    } catch (err) {
+      if (err.statusCode === 404 || err.statusCode === 410) {
+        await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+      }
+    }
+  }
+
+  await prisma.budget.update({
+    where: { id: budget.id },
+    data: { lastNotifiedMonth: month, lastNotifiedYear: year },
+  });
 }
 
 // GET /api/transactions?month=7&year=2026&type=EXPENSE&categoryId=1&page=1&pageSize=20
@@ -129,6 +181,10 @@ router.post("/", transactionValidators, async (req, res, next) => {
       include: { category: true, member: true },
     });
 
+    if (type === "EXPENSE") {
+      await checkBudgetAndNotify(req.userId, categoryId, transaction.date);
+    }
+
     res.status(201).json(transaction);
   } catch (err) {
     next(err);
@@ -167,6 +223,10 @@ router.put("/:id", transactionValidators, async (req, res, next) => {
       },
       include: { category: true, member: true },
     });
+
+    if (type === "EXPENSE") {
+      await checkBudgetAndNotify(req.userId, categoryId, transaction.date);
+    }
 
     res.json(transaction);
   } catch (err) {

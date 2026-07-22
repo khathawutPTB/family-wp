@@ -7,6 +7,7 @@ import TransactionForm from "./pages/TransactionForm";
 import History from "./pages/History";
 import FamilyMembers from "./pages/FamilyMembers";
 import Calendar from "./pages/Calendar";
+import Budgets from "./pages/Budgets";
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/history" element={<History />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/family" element={<FamilyMembers />} />
+        <Route path="/budgets" element={<Budgets />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

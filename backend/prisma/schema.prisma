@@ -29,8 +29,30 @@ model User {
   familyMembers     FamilyMember[]
   calendarNotes     CalendarNote[]
   pushSubscriptions PushSubscription[]
+  budgets           Budget[]
 
   @@map("users")
+}
+
+// A recurring monthly spending cap for one category. Compared against the
+// current month's EXPENSE total each time it's read; lastNotifiedMonth/Year
+// track whether the over-budget push has already fired this month, so we
+// don't spam a notification on every transaction after the cap is crossed.
+model Budget {
+  id                Int      @id @default(autoincrement())
+  userId            Int      @map("user_id")
+  categoryId        Int      @map("category_id")
+  amount            Decimal  @db.Decimal(12, 2)
+  lastNotifiedMonth Int?     @map("last_notified_month")
+  lastNotifiedYear  Int?     @map("last_notified_year")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId])
+  @@map("budgets")
 }
 
 // A browser push subscription for one device. A user can have several
@@ -95,6 +117,7 @@ model Category {
 
   user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  budgets      Budget[]
 
   @@unique([userId, name, type])
   @@map("categories")

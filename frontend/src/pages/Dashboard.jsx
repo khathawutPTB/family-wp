@@ -18,6 +18,7 @@ export default function Dashboard() {
   const [byCategory, setByCategory] = useState([]);
   const [members, setMembers] = useState([]);
   const [byMember, setByMember] = useState([]);
+  const [budgets, setBudgets] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,12 +32,14 @@ export default function Dashboard() {
       api.get("/dashboard/summary", { params: { month, year } }),
       api.get("/dashboard/by-category", { params: { month, year, type: chartType } }),
       api.get("/dashboard/by-member", { params: { month, year } }),
+      api.get("/dashboard/budgets", { params: { month, year } }),
     ])
-      .then(([summaryRes, categoryRes, memberRes]) => {
+      .then(([summaryRes, categoryRes, memberRes, budgetRes]) => {
         if (cancelled) return;
         setSummary(summaryRes.data);
         setByCategory(categoryRes.data);
         setByMember(memberRes.data.members);
+        setBudgets(budgetRes.data);
       })
       .finally(() => !cancelled && setLoading(false));
     return () => {
@@ -164,6 +167,42 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <div className="bg-white rounded-3xl shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-medium text-brand-ink">งบประมาณรายเดือน</h2>
+          <button onClick={() => navigate("/budgets")} className="text-sm text-brand-teal-dark font-medium">
+            จัดการงบ
+          </button>
+        </div>
+        {budgets.length === 0 ? (
+          <p className="text-sm text-brand-ink/40">ยังไม่ได้ตั้งงบประมาณ ลองตั้งงบให้หมวดหมู่ที่ใช้จ่ายบ่อยดูสิ</p>
+        ) : (
+          <div className="space-y-3">
+            {budgets.map((b) => {
+              const barColor =
+                b.percent >= 100 ? "#e8871e" : b.percent >= 80 ? "#f2b705" : "#6fa695";
+              return (
+                <div key={b.id}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg shrink-0">{b.categoryIcon}</span>
+                    <span className="text-sm text-brand-ink flex-1 truncate">{b.categoryName}</span>
+                    <span className="text-sm font-medium text-brand-ink/70">
+                      {currency.format(b.spent)} / {currency.format(b.amount)}
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-brand-cream overflow-hidden">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${Math.min(b.percent, 100)}%`, backgroundColor: barColor }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <div className="bg-white rounded-3xl shadow-sm p-4">
         <div className="flex items-center justify-between mb-2">

@@ -10,6 +10,7 @@ const familyMemberRoutes = require("./routes/familyMembers");
 const calendarNoteRoutes = require("./routes/calendarNotes");
 const pushRoutes = require("./routes/push");
 const cronRoutes = require("./routes/cron");
+const budgetRoutes = require("./routes/budgets");
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use("/api/family-members", familyMemberRoutes);
 app.use("/api/calendar-notes", calendarNoteRoutes);
 app.use("/api/push", pushRoutes);
 app.use("/api/cron", cronRoutes);
+app.use("/api/budgets", budgetRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: "Not found" });
